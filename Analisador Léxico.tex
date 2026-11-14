@@ -1,0 +1,330 @@
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+% ------------------------------------------------
+% PACOTES
+% ------------------------------------------------
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{graphicx}
+
+% ------------------------------------------------
+% IDENTIDADE VISUAL
+% ------------------------------------------------
+
+\definecolor{background}{RGB}{20,25,35}
+\definecolor{primary}{RGB}{90,170,255}
+\definecolor{secondary}{RGB}{130,210,180}
+\definecolor{codebg}{RGB}{30,36,48}
+\definecolor{textcolor}{RGB}{230,235,245}
+
+\usetheme{Madrid}
+
+\setbeamercolor{normal text}{
+    fg=textcolor,
+    bg=background
+}
+
+\setbeamercolor{frametitle}{
+    fg=primary,
+    bg=background
+}
+
+\setbeamercolor{title}{
+    fg=primary
+}
+
+\setbeamercolor{structure}{
+    fg=secondary
+}
+
+\setbeamercolor{block title}{
+    fg=background,
+    bg=primary
+}
+
+\setbeamercolor{block body}{
+    fg=textcolor,
+    bg=codebg
+}
+
+\setbeamertemplate{navigation symbols}{}
+
+% ------------------------------------------------
+% CONFIGURAÇÃO DO CÓDIGO
+% ------------------------------------------------
+
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small\color{textcolor},
+    keywordstyle=\color{primary}\bfseries,
+    stringstyle=\color{secondary},
+    commentstyle=\color{gray}\itshape,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{primary},
+    showstringspaces=false,
+    tabsize=4
+}
+
+% ------------------------------------------------
+% INFORMAÇÕES DO DOCUMENTO
+% ------------------------------------------------
+
+\title{Analisador Léxico}
+\subtitle{Construção de um Scanner para a linguagem MiniLang}
+
+\author{Samuel}
+\institute{Ciência da Computação}
+
+\date{\today}
+
+% ------------------------------------------------
+% DOCUMENTO
+% ------------------------------------------------
+
+\begin{document}
+
+% CAPA
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% SUMÁRIO
+\begin{frame}{Sumário}
+    \tableofcontents
+\end{frame}
+
+% ------------------------------------------------
+\section{Introdução}
+
+\begin{frame}{Introdução}
+
+    A análise léxica representa a primeira etapa do
+    processo de compilação de uma linguagem de programação.
+
+    \vspace{0.4cm}
+
+    Seu objetivo consiste em percorrer o código-fonte,
+    identificando e classificando sequências de caracteres
+    em unidades denominadas \textbf{tokens}.
+
+    \vspace{0.4cm}
+
+    \begin{block}{Proposta do projeto}
+        Desenvolver um analisador léxico utilizando Python
+        e expressões regulares para reconhecer os elementos
+        fundamentais da linguagem MiniLang.
+    \end{block}
+
+\end{frame}
+
+% ------------------------------------------------
+\section{Objetivos}
+
+\begin{frame}{Objetivos}
+
+    \begin{itemize}
+        \item Compreender o funcionamento de um analisador léxico;
+        \item Utilizar expressões regulares na identificação de padrões;
+        \item Reconhecer palavras reservadas e identificadores;
+        \item Classificar operadores, delimitadores e números;
+        \item Identificar caracteres inválidos no código-fonte;
+        \item Desenvolver uma base para futuras etapas de compilação.
+    \end{itemize}
+
+\end{frame}
+
+% ------------------------------------------------
+\section{Fundamentação}
+
+\begin{frame}{O que são tokens?}
+
+    Tokens são unidades léxicas reconhecidas durante
+    a leitura do código-fonte.
+
+    \vspace{0.3cm}
+
+    Considere a seguinte instrução:
+
+    \begin{block}{Exemplo}
+        \texttt{int idade = 20;}
+    \end{block}
+
+    O analisador identifica:
+
+    \begin{center}
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Token} & \textbf{Classificação} \\
+        \midrule
+        int & Palavra-chave \\
+        idade & Identificador \\
+        = & Operador \\
+        20 & Número inteiro \\
+        ; & Delimitador \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+
+\end{frame}
+
+% ------------------------------------------------
+\section{Implementação}
+
+\begin{frame}[fragile]{Tecnologias utilizadas}
+
+    \begin{itemize}
+        \item \textbf{Python:} linguagem utilizada na implementação;
+        \item \textbf{re:} biblioteca para expressões regulares;
+        \item \textbf{Regex:} mecanismo de reconhecimento dos padrões;
+        \item \textbf{MiniLang:} linguagem utilizada como referência.
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Definição dos tokens}
+
+\begin{lstlisting}[style=pythonstyle]
+PALAVRAS_CHAVE = {
+    "int", "float", "if",
+    "else", "while", "print"
+}
+
+REGRAS = [
+    ("NUM_FLOAT", r"\d+\.\d+"),
+    ("NUMINT", r"\d+"),
+    ("IDENTIFICADOR",
+     r"[a-zA-Z][a-zA-Z0-9_]*"),
+    ("OPERADOR", r"==|!=|>=|<=|[+\-*/=<>]"),
+    ("DELIMITADOR", r"[(){},;]"),
+    ("ESPACO", r"\s+"),
+]
+\end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]{Construção do padrão}
+
+\begin{lstlisting}[style=pythonstyle]
+import re
+
+PADRAO = re.compile(
+    "|".join(
+        f"(?P<{nome}>{regra})"
+        for nome, regra in REGRAS
+    )
+)
+\end{lstlisting}
+
+    \vspace{0.3cm}
+
+    Cada expressão regular é associada a um grupo nomeado,
+    permitindo identificar qual regra reconheceu determinado
+    trecho do código-fonte.
+
+\end{frame}
+
+% ------------------------------------------------
+\section{Funcionamento}
+
+\begin{frame}{Fluxo da análise léxica}
+
+    \begin{enumerate}
+        \item Receber o código-fonte;
+        \item Percorrer os caracteres sequencialmente;
+        \item Aplicar as expressões regulares;
+        \item Identificar o tipo de token;
+        \item Descartar espaços em branco;
+        \item Verificar palavras reservadas;
+        \item Armazenar os tokens identificados;
+        \item Reportar caracteres inválidos.
+    \end{enumerate}
+
+\end{frame}
+
+\begin{frame}[fragile]{Exemplo de entrada}
+
+\begin{lstlisting}[style=pythonstyle]
+codigo = """
+int idade = 20;
+float altura = 1.75;
+
+if (idade > 18) {
+    print(idade);
+}
+"""
+\end{lstlisting}
+
+\end{frame}
+
+\begin{frame}{Resultado esperado}
+
+    \begin{block}{Tokens identificados}
+        \texttt{PALAVRA\_CHAVE: int}
+
+        \texttt{IDENTIFICADOR: idade}
+
+        \texttt{OPERADOR: =}
+
+        \texttt{NUMINT: 20}
+
+        \texttt{DELIMITADOR: ;}
+    \end{block}
+
+    \vspace{0.3cm}
+
+    O processo é repetido até que todo o código-fonte
+    seja analisado.
+
+\end{frame}
+
+% ------------------------------------------------
+\section{Considerações finais}
+
+\begin{frame}{Considerações finais}
+
+    O desenvolvimento do analisador léxico permite
+    compreender conceitos fundamentais da construção
+    de linguagens de programação.
+
+    \vspace{0.4cm}
+
+    Além disso, estabelece uma base para a implementação
+    de outras etapas de um compilador, como:
+
+    \begin{itemize}
+        \item Análise sintática;
+        \item Construção de árvores sintáticas;
+        \item Análise semântica;
+        \item Geração de código intermediário.
+    \end{itemize}
+
+\end{frame}
+
+% ------------------------------------------------
+% ENCERRAMENTO
+% ------------------------------------------------
+
+\begin{frame}
+    \centering
+
+    {\Huge\color{primary} Obrigado!}
+
+    \vspace{0.5cm}
+
+    {\large Analisador Léxico -- MiniLang}
+
+    \vspace{0.3cm}
+
+    {\small Ciência da Computação}
+\end{frame}
+
+\end{document}

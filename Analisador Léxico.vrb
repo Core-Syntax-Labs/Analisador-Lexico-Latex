@@ -1,0 +1,13 @@
+\frametitle{Exemplo de entrada}
+
+\begin{lstlisting}[style=pythonstyle]
+codigo = """
+int idade = 20;
+float altura = 1.75;
+
+if (idade > 18) {
+    print(idade);
+}
+"""
+\end{lstlisting}
+
