@@ -127,25 +127,57 @@
 \end{frame}
 
 % ------------------------------------------------
-\section{Objetivos}
+\section{Definição Formal}
 
-\begin{frame}{Objetivos}
+\begin{frame}{Definição Formal}
 
-    \begin{itemize}
-        \item Compreender o funcionamento de um analisador léxico;
-        \item Utilizar expressões regulares na identificação de padrões;
-        \item Reconhecer palavras reservadas e identificadores;
-        \item Classificar operadores, delimitadores e números;
-        \item Identificar caracteres inválidos no código-fonte;
-        \item Desenvolver uma base para futuras etapas de compilação.
+	A utilização do Autômato Finito Determinístico (AFD) 
+	justifica-se pela sua capacidade de reconhecer padrões 
+	de caracteres de maneira organizada e previsível. 
+
+    Um Autômato Finito Determinístico é representado pela tupla:
+    
+    \begin{equation}
+		M = (Q, \Sigma, \delta, q_0, F)
+	\end{equation}
+    
+    \begin{table}[h]
+    \centering
+    \caption{Elementos da tupla matemática do AFD}
+    \begin{tabular}{|c|l|}
+        \hline
+        \textbf{Elemento} & \textbf{Significado} \\ \hline
+        $Q$ & Conjunto de estados do autômato. \\ \hline
+        $\Sigma$ & Alfabeto de entrada (caracteres aceitos). \\ \hline
+        $\delta$ & Função de transição entre os estados. \\ \hline
+        $q_0$ & Estado inicial. \\ \hline
+        $F$ & Conjunto de estados finais (aceitação). \\ \hline
+    \end{tabular}
+    \label{tab:elementos-afd}
+	\end{table}
+
+\end{frame}
+
+
+\begin{frame}
+	
+	
+	No contexto deste projeto, o autômato será utilizado como base para o reconhecimento dos padrões 			presentes na MiniLang. A partir da leitura dos caracteres de entrada, o analisador identifica as 			sequências correspondentes a cada categoria léxica, classificando-as em tokens, como palavras-				chave, identificadores, literais numéricos e operadores aritméticos.
+	
+   \begin{itemize}
+        \item \textbf{Palavras-chave:} if, else, while, int, float.
+        \item \textbf{Identificadores:} contador, idade, valor.
+        \item \textbf{Números inteiros:} 10, 25, 100.
+        \item \textbf{Números decimais:} 10.5, 3.14.
+        \item \textbf{Operadores aritméticos:} +, -, *, /.
     \end{itemize}
 
 \end{frame}
 
 % ------------------------------------------------
-\section{Fundamentação}
+\section{Diagrama de Transições}
 
-\begin{frame}{O que são tokens?}
+\begin{frame}{Diagrama de Transições}
 
     Tokens são unidades léxicas reconhecidas durante
     a leitura do código-fonte.
@@ -177,9 +209,9 @@
 \end{frame}
 
 % ------------------------------------------------
-\section{Implementação}
+\section{Minimização (se aplicável)}
 
-\begin{frame}[fragile]{Tecnologias utilizadas}
+\begin{frame}[fragile]{Minimização (se aplicável)}
 
     \begin{itemize}
         \item \textbf{Python:} linguagem utilizada na implementação;
@@ -233,9 +265,9 @@ PADRAO = re.compile(
 \end{frame}
 
 % ------------------------------------------------
-\section{Funcionamento}
+\section{Implementação de Apoio}
 
-\begin{frame}{Fluxo da análise léxica}
+\begin{frame}{Implementação de Apoio}
 
     \begin{enumerate}
         \item Receber o código-fonte;
