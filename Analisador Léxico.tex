@@ -11,6 +11,8 @@
 \usepackage{xcolor}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{automata, positioning, arrows.meta}
 
 % ------------------------------------------------
 % IDENTIDADE VISUAL
@@ -55,6 +57,28 @@
 \setbeamertemplate{navigation symbols}{}
 
 % ------------------------------------------------
+% ESTILO DOS DIAGRAMAS DE AUTÔMATOS (TikZ)
+% ------------------------------------------------
+
+\tikzset{
+    afd/.style={
+        >=Stealth,
+        auto,
+        thick,
+        color=textcolor,
+        initial text={},
+        every state/.style={
+            draw=primary,
+            fill=codebg,
+            text=textcolor,
+            minimum size=1.1cm,
+            thick
+        },
+        accepting/.style={draw=secondary, accepting by double}
+    }
+}
+
+% ------------------------------------------------
 % CONFIGURAÇÃO DO CÓDIGO
 % ------------------------------------------------
 
@@ -81,7 +105,7 @@
 \title{Analisador Léxico}
 \subtitle{Construção de um Scanner para a linguagem MiniLang}
 
-\author{Samuel}
+\author{Samuel Douglas , Ryan Rodrigues }
 \institute{Ciência da Computação}
 
 \date{\today}
@@ -208,10 +232,217 @@
 
 \end{frame}
 
-% ------------------------------------------------
-\section{Minimização (se aplicável)}
 
-\begin{frame}[fragile]{Minimização (se aplicável)}
+\begin{frame}{AFD para Identificadores}
+
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \textbf{Expressão regular:}
+            \[ \texttt{[a-zA-Z\_][a-zA-Z0-9\_]*} \]
+
+            \textbf{Tupla formal} $M = (Q, \Sigma, \delta, q_0, F)$:
+            \begin{itemize}
+                \item $Q = \{q_0, q_1, q_d\}$
+                \item $\Sigma = \{L, D, \_\}$
+                \item $q_0$: estado inicial
+                \item $F = \{q_1\}$
+                \item $q_1$: aceitação; \ $q_d$: erro
+            \end{itemize}
+
+            {\small $L$ = letra (\texttt{a-z}, \texttt{A-Z}); \quad $D$ = dígito (\texttt{0-9}).}
+        \end{column}
+
+        \begin{column}{0.52\textwidth}
+            \centering
+            \begin{tikzpicture}[afd, node distance=3cm]
+                \node[state, initial]   (q0) {$q_0$};
+                \node[state, accepting, right=of q0] (q1) {$q_1$};
+
+                \path[->]
+                    (q0) edge node {$L,\, \_$} (q1)
+                    (q1) edge[loop above] node {$L,\, D,\, \_$} (q1);
+            \end{tikzpicture}
+
+            \vspace{0.4cm}
+            {\small Transições não representadas levam ao estado de erro $q_d$.}
+        \end{column}
+    \end{columns}
+
+\end{frame}
+
+\begin{frame}{AFD para Números (inteiros e decimais)}
+
+    \begin{columns}[T]
+        \begin{column}{0.36\textwidth}
+            \textbf{Expressões regulares:}
+            \[ \text{Inteiro} = \texttt{[0-9]+} \]
+            \[ \text{Float} = \texttt{[0-9]+\textbackslash.[0-9]+} \]
+
+            \textbf{Tupla formal:}
+            \begin{itemize}
+                \item $Q = \{q_0, q_1, q_2, q_3, q_d\}$
+                \item $\Sigma = \{D, .\}$
+                \item $F = \{q_1, q_3\}$
+            \end{itemize}
+
+            {\small $q_1$: inteiro; \quad $q_3$: decimal.}
+        \end{column}
+
+        \begin{column}{0.64\textwidth}
+            \centering
+            \resizebox{\linewidth}{!}{%
+            \begin{tikzpicture}[afd, node distance=2.2cm]
+                \node[state, initial]   (q0) {$q_0$};
+                \node[state, accepting, right=of q0] (q1) {$q_1$};
+                \node[state, right=of q1] (q2) {$q_2$};
+                \node[state, accepting, right=of q2] (q3) {$q_3$};
+
+                \path[->]
+                    (q0) edge node {$D$} (q1)
+                    (q1) edge[loop above] node {$D$} (q1)
+                    (q1) edge node {\Large\texttt{.}} (q2)
+                    (q2) edge node {$D$} (q3)
+                    (q3) edge[loop above] node {$D$} (q3);
+            \end{tikzpicture}%
+            }
+
+            \vspace{0.4cm}
+            {\small Transições não representadas levam ao estado de erro $q_d$.}
+        \end{column}
+    \end{columns}
+
+\end{frame}
+
+\begin{frame}{AFD para Operadores e Delimitadores}
+
+    \begin{columns}[T]
+        \begin{column}{0.40\textwidth}
+            \textbf{Tupla formal:}
+            \begin{itemize}
+                \item $Q = \{q_0, q_1, q_2, q_3, q_d\}$
+                \item $\Sigma = \{+,-,*,/,=,(,),\{,\},;\}$
+                \item $F = \{q_1, q_2, q_3\}$
+            \end{itemize}
+
+            {\small Cada símbolo é reconhecido em uma única transição. Qualquer outro caractere leva a $q_d$.}
+        \end{column}
+
+        \begin{column}{0.60\textwidth}
+            \centering
+            \resizebox{\linewidth}{!}{%
+            \begin{tikzpicture}[afd]
+                \node[state, initial] (q0) at (0,0) {$q_0$};
+                \node[state, accepting] (q1) at (4.2,1.8)  {$q_1$};
+                \node[state, accepting] (q2) at (4.2,0)    {$q_2$};
+                \node[state, accepting] (q3) at (4.2,-1.8) {$q_3$};
+
+                \node[right=2pt of q1] {\small Operador aritmético};
+                \node[right=2pt of q2] {\small Atribuição};
+                \node[right=2pt of q3] {\small Delimitador};
+
+                \path[->]
+                    (q0) edge node[fill=background, inner sep=2pt, pos=0.45] {$+,\,-,\,*,\,/$} (q1)
+                    (q0) edge node[fill=background, inner sep=2pt, pos=0.45] {$=$} (q2)
+                    (q0) edge node[fill=background, inner sep=2pt, pos=0.45] {$(,\,),\,\{,\,\},\,;$} (q3);
+            \end{tikzpicture}%
+            }
+
+            \vspace{0.3cm}
+            {\small Transições não representadas levam ao estado de erro $q_d$.}
+        \end{column}
+    \end{columns}
+
+\end{frame}
+
+\begin{frame}{Tabelas de Transição}
+
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \centering
+            \textbf{Identificadores}
+
+            \vspace{0.2cm}
+            \begin{tabular}{c|ccc}
+                $\delta$ & $L$ & $D$ & $\_$ \\
+                \midrule
+                $\to q_0$ & $q_1$ & $q_d$ & $q_1$ \\
+                $*q_1$    & $q_1$ & $q_1$ & $q_1$ \\
+                $q_d$     & $q_d$ & $q_d$ & $q_d$ \\
+            \end{tabular}
+        \end{column}
+
+        \begin{column}{0.48\textwidth}
+            \centering
+            \textbf{Números}
+
+            \vspace{0.2cm}
+            \begin{tabular}{c|cc}
+                $\delta$ & $D$ & $.$ \\
+                \midrule
+                $\to q_0$ & $q_1$ & $q_d$ \\
+                $*q_1$    & $q_1$ & $q_2$ \\
+                $q_2$     & $q_3$ & $q_d$ \\
+                $*q_3$    & $q_3$ & $q_d$ \\
+                $q_d$     & $q_d$ & $q_d$ \\
+            \end{tabular}
+        \end{column}
+    \end{columns}
+
+    \vspace{0.4cm}
+    \begin{center}
+        {\small $\to$ estado inicial; \quad $*$ estado de aceitação; \quad $q_d$ estado de erro.}
+    \end{center}
+
+\end{frame}
+
+% ------------------------------------------------
+\section{Minimização}
+
+\begin{frame}{Minimização dos AFDs}
+
+    Aplicamos o \textbf{refinamento de partições}: parte-se de $\{F,\ Q\setminus F\}$ e
+    separam-se os estados cujas transições levam a classes diferentes, até estabilizar.
+
+    \vspace{0.3cm}
+
+    \begin{block}{AFD de identificadores}
+        \begin{itemize}
+            \item Partição inicial: $\{q_1\}$ \ e \ $\{q_0, q_d\}$
+            \item $q_0$ e $q_d$ divergem em $L$: $\delta(q_0,L)=q_1\in F$, mas $\delta(q_d,L)=q_d\notin F$
+            \item Resultado: $\{q_0\}, \{q_1\}, \{q_d\}$ (3 classes para 3 estados)
+        \end{itemize}
+    \end{block}
+
+    \vspace{0.2cm}
+    \textbf{Conclusão:} o AFD de identificadores já é mínimo.
+
+\end{frame}
+
+\begin{frame}{Minimização: números e operadores}
+
+    \begin{block}{AFD de números}
+        \begin{itemize}
+            \item Partição inicial: $\{q_1,q_3\}$ \ e \ $\{q_0,q_2,q_d\}$
+            \item Em $D$, $q_d$ se separa de $q_0$ e $q_2$: $\{q_0,q_2\}$ \ e \ $\{q_d\}$
+            \item Em $.$, $q_1$ vai a $q_2$ e $q_3$ vai a $q_d$ (classes distintas): $q_1 \neq q_3$
+            \item Em $D$, $q_0$ vai a $q_1$ e $q_2$ vai a $q_3$: $q_0 \neq q_2$
+            \item Resultado: 5 classes para 5 estados, logo já é mínimo
+        \end{itemize}
+    \end{block}
+
+    \vspace{0.2cm}
+
+    \begin{block}{AFD de operadores e delimitadores}
+        Em termos de linguagem, $q_1$, $q_2$ e $q_3$ são equivalentes. São mantidos
+        separados porque cada estado final emite um tipo de token diferente.
+    \end{block}
+
+\end{frame}
+
+% ------------------------------------------------
+\section{Implementação de Apoio}
+
+\begin{frame}[fragile]{Ferramentas Utilizadas}
 
     \begin{itemize}
         \item \textbf{Python:} linguagem utilizada na implementação;
@@ -234,7 +465,7 @@ REGRAS = [
     ("NUM_FLOAT", r"\d+\.\d+"),
     ("NUMINT", r"\d+"),
     ("IDENTIFICADOR",
-     r"[a-zA-Z][a-zA-Z0-9_]*"),
+     r"[a-zA-Z_][a-zA-Z0-9_]*"),
     ("OPERADOR", r"==|!=|>=|<=|[+\-*/=<>]"),
     ("DELIMITADOR", r"[(){},;]"),
     ("ESPACO", r"\s+"),
@@ -265,8 +496,6 @@ PADRAO = re.compile(
 \end{frame}
 
 % ------------------------------------------------
-\section{Implementação de Apoio}
-
 \begin{frame}{Implementação de Apoio}
 
     \begin{enumerate}
