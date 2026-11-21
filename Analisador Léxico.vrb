@@ -1,13 +1,21 @@
-\frametitle{Exemplo de entrada}
-
-\begin{lstlisting}[style=pythonstyle]
-codigo = """
-int idade = 20;
-float altura = 1.75;
-
-if (idade > 18) {
-    print(idade);
+\frametitle{Exemplo Prático: Número Par de \texttt {'a'}s}
+Instanciação e teste de palavras sobre $\Sigma = \{a, b\}$:
+    \begin{lstlisting}[language=Python, basicstyle=\ttfamily\tiny]
+states = {'q0', 'q1'}
+alphabet = {'a', 'b'}
+transitions = {
+    ('q0', 'a'): 'q1', ('q0', 'b'): 'q0',
+    ('q1', 'a'): 'q0', ('q1', 'b'): 'q1'
 }
-"""
-\end{lstlisting}
+start_state = 'q0'
+accept_states = {'q0'}
 
+automaton = DFA(
+    states, alphabet, transitions, start_state, accept_states
+)
+
+test_strings = ["aab", "abba", "bba", "aaaa"]
+for s in test_strings:
+    res = "Aceita" if automaton.process_string(s) else "Rejeitada"
+    print(f"String '{s}': {res}")
+    \end{lstlisting}

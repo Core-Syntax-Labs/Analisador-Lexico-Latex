@@ -37,8 +37,11 @@
 }
 
 \setbeamercolor{title}{
-    fg=primary
+    fg=black
 }
+
+\setbeamerfont{title}{series=\bfseries}
+\setbeamerfont{subtitle}{series=\bfseries}
 
 \setbeamercolor{structure}{
     fg=secondary
@@ -54,7 +57,7 @@
     bg=codebg
 }
 
-\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}{}
 
 % ------------------------------------------------
 % ESTILO DOS DIAGRAMAS DE AUTÔMATOS (TikZ)
@@ -105,7 +108,7 @@
 \title{Analisador Léxico}
 \subtitle{Construção de um Scanner para a linguagem MiniLang}
 
-\author{Samuel Douglas , Ryan Rodrigues }
+\author{Samuel Douglas, Ryan Rodrigues, Rafael Alexandre, Alânderson Santos, Daniel Manuel }
 \institute{Ciência da Computação}
 
 \date{\today}
@@ -442,132 +445,92 @@
 % ------------------------------------------------
 \section{Implementação de Apoio}
 
-\begin{frame}[fragile]{Ferramentas Utilizadas}
-
-    \begin{itemize}
-        \item \textbf{Python:} linguagem utilizada na implementação;
-        \item \textbf{re:} biblioteca para expressões regulares;
-        \item \textbf{Regex:} mecanismo de reconhecimento dos padrões;
-        \item \textbf{MiniLang:} linguagem utilizada como referência.
-    \end{itemize}
-
-\end{frame}
-
-\begin{frame}[fragile]{Definição dos tokens}
-
-\begin{lstlisting}[style=pythonstyle]
-PALAVRAS_CHAVE = {
-    "int", "float", "if",
-    "else", "while", "print"
-}
-
-REGRAS = [
-    ("NUM_FLOAT", r"\d+\.\d+"),
-    ("NUMINT", r"\d+"),
-    ("IDENTIFICADOR",
-     r"[a-zA-Z_][a-zA-Z0-9_]*"),
-    ("OPERADOR", r"==|!=|>=|<=|[+\-*/=<>]"),
-    ("DELIMITADOR", r"[(){},;]"),
-    ("ESPACO", r"\s+"),
-]
-\end{lstlisting}
-
-\end{frame}
-
-\begin{frame}[fragile]{Construção do padrão}
-
-\begin{lstlisting}[style=pythonstyle]
-import re
-
-PADRAO = re.compile(
-    "|".join(
-        f"(?P<{nome}>{regra})"
-        for nome, regra in REGRAS
-    )
-)
-\end{lstlisting}
-
-    \vspace{0.3cm}
-
-    Cada expressão regular é associada a um grupo nomeado,
-    permitindo identificar qual regra reconheceu determinado
-    trecho do código-fonte.
-
-\end{frame}
-
-% ------------------------------------------------
-\begin{frame}{Implementação de Apoio}
-
-    \begin{enumerate}
-        \item Receber o código-fonte;
-        \item Percorrer os caracteres sequencialmente;
-        \item Aplicar as expressões regulares;
-        \item Identificar o tipo de token;
-        \item Descartar espaços em branco;
-        \item Verificar palavras reservadas;
-        \item Armazenar os tokens identificados;
-        \item Reportar caracteres inválidos.
-    \end{enumerate}
-
-\end{frame}
-
-\begin{frame}[fragile]{Exemplo de entrada}
-
-\begin{lstlisting}[style=pythonstyle]
-codigo = """
-int idade = 20;
-float altura = 1.75;
-
-if (idade > 18) {
-    print(idade);
-}
-"""
-\end{lstlisting}
-
-\end{frame}
-
-\begin{frame}{Resultado esperado}
-
-    \begin{block}{Tokens identificados}
-        \texttt{PALAVRA\_CHAVE: int}
-
-        \texttt{IDENTIFICADOR: idade}
-
-        \texttt{OPERADOR: =}
-
-        \texttt{NUMINT: 20}
-
-        \texttt{DELIMITADOR: ;}
+% --- SLIDE 1: FORMALISMO MATEMÁTICO ---
+\begin{frame}{Formalismo Matemático do AFD}
+    Um Autômato Finito Determinístico é definido pela quíntupla:
+    \begin{block}{Definição Formal}
+        \[ M = (Q, \Sigma, \delta, q_0, F) \]
     \end{block}
-
+    
     \vspace{0.3cm}
-
-    O processo é repetido até que todo o código-fonte
-    seja analisado.
-
+    \begin{itemize}
+        \item $Q$: Conjunto finito de estados;
+        \item $\Sigma$: Alfabeto finito de símbolos de entrada;
+        \item $\delta: Q \times \Sigma \rightarrow Q$: Função de transição de estados;
+        \item $q_0 \in Q$: Estado inicial;
+        \item $F \subseteq Q$: Conjunto de estados de aceitação.
+    \end{itemize}
 \end{frame}
 
-% ------------------------------------------------
-\section{Considerações finais}
+% --- SLIDE 2: CLASSE DFA (CÓDIGO) ---
+\begin{frame}[fragile]{Implementação em Python: Estrutura do Autômato}
+    Mapeamento direto da quíntupla $M$ na classe \texttt{DFA}:
+    \begin{lstlisting}[language=Python, basicstyle=\ttfamily\tiny]
+class DFA:
+    def __init__(self, states, alphabet, transitions, start_state, accept_states):
+        self.states = states                # Q
+        self.alphabet = alphabet            # Sigma
+        self.transitions = transitions      # delta: {(q, a): q'}
+        self.start_state = start_state      # q0
+        self.accept_states = accept_states  # F
 
-\begin{frame}{Considerações finais}
+    def process_string(self, input_string):
+        current_state = self.start_state
+        for symbol in input_string:
+            if symbol not in self.alphabet:
+                return False
+            next_state = self.transitions.get((current_state, symbol))
+            if next_state is None:
+                return False
+            current_state = next_state
+        return current_state in self.accept_states
+    \end{lstlisting}
+\end{frame}
 
-    O desenvolvimento do analisador léxico permite
-    compreender conceitos fundamentais da construção
-    de linguagens de programação.
+% --- SLIDE 3: EXEMPLO DE USO (CÓDIGO) ---
+\begin{frame}[fragile]{Exemplo Prático: Número Par de \texttt{'a'}s}
+    Instanciação e teste de palavras sobre $\Sigma = \{a, b\}$:
+    \begin{lstlisting}[language=Python, basicstyle=\ttfamily\tiny]
+states = {'q0', 'q1'}
+alphabet = {'a', 'b'}
+transitions = {
+    ('q0', 'a'): 'q1', ('q0', 'b'): 'q0',
+    ('q1', 'a'): 'q0', ('q1', 'b'): 'q1'
+}
+start_state = 'q0'
+accept_states = {'q0'}
 
-    \vspace{0.4cm}
+automaton = DFA(
+    states, alphabet, transitions, start_state, accept_states
+)
 
-    Além disso, estabelece uma base para a implementação
-    de outras etapas de um compilador, como:
+test_strings = ["aab", "abba", "bba", "aaaa"]
+for s in test_strings:
+    res = "Aceita" if automaton.process_string(s) else "Rejeitada"
+    print(f"String '{s}': {res}")
+    \end{lstlisting}
+\end{frame}
 
-    \begin{itemize}
-        \item Análise sintática;
-        \item Construção de árvores sintáticas;
-        \item Análise semântica;
-        \item Geração de código intermediário.
-    \end{itemize}
-
+% --- SLIDE 4: ANÁLISE TÉCNICA ---
+\begin{frame}{Análise da Implementação}
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \begin{block}{Eficiência de Busca}
+                A função $\delta$ utiliza um \textbf{dicionário de tuplas} \texttt{\{(q, a): q'\}}, garantindo tempo de acesso $O(1)$ a cada símbolo lido.
+            \end{block}
+        \end{column}
+        
+        \begin{column}{0.48\textwidth}
+            \begin{block}{Segurança e Validação}
+                O simulador valida a pertinência ao alfabeto $\Sigma$ em cada passo e rejeita imediatamente transições ausentes (estado morto).
+            \end{block}
+        \end{column}
+    \end{columns}
+    
+    \vspace{0.5cm}
+    \begin{alertblock}{Critério de Aceitação}
+        Após o consumo total da entrada, a cadeia é aceita se, e somente se, \texttt{current\_state} $\in F$.
+    \end{alertblock}
 \end{frame}
 
 % ------------------------------------------------

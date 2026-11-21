@@ -4,4 +4,3 @@
 \beamer@sectionintoc {3}{Diagrama de Transições}{6}{0}{3}
 \beamer@sectionintoc {4}{Minimização}{11}{0}{4}
 \beamer@sectionintoc {5}{Implementação de Apoio}{13}{0}{5}
-\beamer@sectionintoc {6}{Considerações finais}{19}{0}{6}
