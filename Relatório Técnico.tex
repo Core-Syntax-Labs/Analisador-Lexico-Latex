@@ -1,0 +1,538 @@
+\documentclass[12pt,a4paper]{article}
+
+% ------------------------------------------------
+% PACOTES
+% ------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{automata,positioning,arrows.meta}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{caption}
+
+\geometry{margin=2.5cm}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+% ------------------------------------------------
+% CONFIGURAÇÃO DOS DIAGRAMAS
+% ------------------------------------------------
+\definecolor{azul}{RGB}{35,90,150}
+\definecolor{verde}{RGB}{35,125,90}
+\definecolor{cinza}{RGB}{90,90,90}
+
+\tikzset{
+    afd/.style={
+        ->,
+        >=Stealth,
+        auto,
+        semithick,
+        every state/.style={
+            draw=azul,
+            fill=blue!4,
+            text=black,
+            minimum size=10mm
+        },
+        accepting/.style={
+            draw=verde,
+            fill=green!5,
+            double,
+            double distance=1.5pt
+        }
+    }
+}
+
+% ------------------------------------------------
+% CONFIGURAÇÃO DOS CÓDIGOS
+% ------------------------------------------------
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{verde},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4,
+    inputencoding=utf8,
+    extendedchars=true
+}
+\lstset{style=pythonstyle}
+
+% ------------------------------------------------
+% IDENTIFICAÇÃO
+% ------------------------------------------------
+\title{\textbf{Analisador Léxico: Construção de um Scanner para a Linguagem MiniLang}}
+\author{
+Samuel Douglas \and Ryan Rodrigues \and Rafael Alexandre \and
+Alânderson Santos \and Daniel Manuel\\[0.4em]
+\small Ciência da Computação
+}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+A análise léxica é a primeira etapa do processo de compilação e tem como
+objetivo transformar o código-fonte em uma sequência de unidades denominadas
+tokens. Este trabalho apresenta a especificação de um analisador léxico
+(scanner) para uma linguagem fictícia denominada MiniLang. O estudo descreve
+as categorias léxicas reconhecidas, a representação formal de Autômatos
+Finitos Determinísticos (AFDs), seus diagramas de transição, tabelas de
+transição e o processo de minimização. Também é apresentada uma implementação
+de apoio em Python, utilizando expressões regulares para identificar
+palavras-chave, identificadores, números inteiros, números decimais,
+operadores e delimitadores. O objetivo é demonstrar como os conceitos de
+Linguagens Formais e Autômatos podem ser aplicados à construção de um
+componente inicial de um compilador.
+\end{abstract}
+
+\noindent\textbf{Palavras-chave:} Análise léxica; Autômato Finito Determinístico;
+Compiladores; Scanner; MiniLang.
+
+\section{Introdução}
+
+Um compilador realiza diferentes etapas para transformar um programa escrito
+em uma linguagem de programação em uma representação que possa ser processada
+ou executada por um computador. A primeira dessas etapas é a análise léxica,
+responsável por percorrer o código-fonte e agrupar sequências de caracteres
+em unidades significativas chamadas \textit{tokens}.
+
+O componente responsável por essa atividade é denominado analisador léxico
+ou \textit{scanner}. Durante a leitura, ele identifica padrões como nomes de
+variáveis, palavras reservadas, valores numéricos e símbolos operadores.
+Essas unidades são encaminhadas às etapas posteriores do processo de
+compilação.
+
+Neste projeto, foi definida uma linguagem fictícia chamada MiniLang. O
+analisador proposto reconhece um conjunto reduzido de elementos léxicos,
+permitindo demonstrar o funcionamento dos autômatos e a classificação dos
+tokens.
+
+\subsection{Objetivo}
+
+O objetivo geral é especificar e implementar um analisador léxico para a
+MiniLang. Como objetivos específicos, busca-se:
+\begin{itemize}
+    \item apresentar as categorias de tokens reconhecidas;
+    \item formalizar os autômatos por meio de quíntuplas;
+    \item representar os estados e as transições utilizando diagramas TikZ;
+    \item apresentar tabelas de transição e discutir a minimização dos AFDs;
+    \item implementar uma versão de apoio em Python.
+\end{itemize}
+
+\section{Especificação léxica da MiniLang}
+
+A MiniLang utiliza um conjunto de palavras-chave, identificadores, literais
+numéricos, operadores e delimitadores. As categorias consideradas neste
+trabalho são apresentadas na Tabela~\ref{tab:tokens}.
+
+\begin{table}[H]
+\centering
+\caption{Categorias léxicas da MiniLang}
+\label{tab:tokens}
+\begin{tabular}{p{3.4cm}p{9.0cm}}
+\toprule
+\textbf{Categoria} & \textbf{Exemplos} \\
+\midrule
+Palavras-chave & \texttt{if}, \texttt{else}, \texttt{while}, \texttt{int}, \texttt{float} \\
+Identificadores & \texttt{contador}, \texttt{idade}, \texttt{valor} \\
+Números inteiros & \texttt{10}, \texttt{25}, \texttt{100} \\
+Números decimais & \texttt{10.5}, \texttt{3.14} \\
+Operadores aritméticos & \texttt{+}, \texttt{-}, \texttt{*}, \texttt{/} \\
+Atribuição & \texttt{=} \\
+Delimitadores & \texttt{(}, \texttt{)}, \texttt{\{}, \texttt{\}}, \texttt{;} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Um identificador deve começar com uma letra ou sublinhado e pode ser seguido
+por letras, dígitos ou sublinhados. Essa regra é representada pela expressão
+regular:
+\[
+    [a-zA-Z\_][a-zA-Z0-9\_]^*
+\]
+
+Os números inteiros são formados por um ou mais dígitos:
+\[
+    [0-9]^+
+\]
+
+Os números decimais possuem uma parte inteira, um ponto e uma parte fracionária,
+todas com pelo menos um dígito:
+\[
+    \texttt{[0-9]+[.][0-9]+}
+\]
+
+\section{Fundamentação formal: Autômato Finito Determinístico}
+
+Um Autômato Finito Determinístico (AFD) é uma máquina abstrata utilizada para
+reconhecer linguagens regulares. Formalmente, é definido pela quíntupla:
+\begin{equation}
+    M = (Q,\Sigma,\delta,q_0,F)
+    \label{eq:afd}
+\end{equation}
+
+Em que:
+\begin{itemize}
+    \item $Q$ é o conjunto finito de estados;
+    \item $\Sigma$ é o alfabeto de entrada;
+    \item $\delta: Q \times \Sigma \rightarrow Q$ é a função de transição;
+    \item $q_0 \in Q$ é o estado inicial;
+    \item $F \subseteq Q$ é o conjunto de estados de aceitação.
+\end{itemize}
+
+No analisador léxico, os AFDs representam os padrões que podem ser
+reconhecidos durante a leitura dos caracteres. Quando a entrada termina em
+um estado de aceitação, o padrão correspondente foi reconhecido. Transições
+não permitidas conduzem à rejeição ou a um estado de erro.
+
+\section{Diagramas e especificação dos autômatos}
+
+\subsection{AFD para identificadores}
+
+O autômato de identificadores exige que o primeiro caractere seja uma letra
+($L$) ou sublinhado (\texttt{\_}). Depois do primeiro caractere, são
+permitidas letras, dígitos ($D$) e sublinhados. O estado $q_1$ é final,
+pois representa uma sequência que atende à regra de identificador.
+
+A expressão regular correspondente é:
+\[
+    [a-zA-Z\_][a-zA-Z0-9\_]^*
+\]
+
+A definição formal simplificada é:
+\[
+\begin{aligned}
+Q &= \{q_0,q_1,q_d\},\\
+\Sigma &= \{L,D,\_\},\\
+q_0 &= \text{estado inicial},\\
+F &= \{q_1\}.
+\end{aligned}
+\]
+O estado $q_d$ representa o estado de erro. O diagrama é apresentado na
+Figura~\ref{fig:afd-identificador}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[afd,node distance=3.2cm]
+    \node[state,initial] (q0) {$q_0$};
+    \node[state,accepting,right=of q0] (q1) {$q_1$};
+    \path
+        (q0) edge node[above] {$L,\ \_$} (q1)
+        (q1) edge[loop above] node {$L,\ D,\ \_$} (q1);
+\end{tikzpicture}
+\caption{AFD para reconhecimento de identificadores.}
+\label{fig:afd-identificador}
+\end{figure}
+
+\subsection{AFD para números inteiros e decimais}
+
+O reconhecimento de números utiliza cinco estados: $q_0$ é inicial; $q_1$
+reconhece a parte inteira; $q_2$ indica que o ponto decimal foi lido; $q_3$
+reconhece a parte fracionária; e $q_d$ representa erro.
+
+Os estados finais são $q_1$ e $q_3$, pois uma sequência formada apenas por
+dígitos é um inteiro, enquanto uma sequência com parte fracionária completa
+é um decimal. A definição é:
+\[
+\begin{aligned}
+Q &= \{q_0,q_1,q_2,q_3,q_d\},\\
+\Sigma &= \{D,.\},\\
+F &= \{q_1,q_3\}.
+\end{aligned}
+\]
+
+A Figura~\ref{fig:afd-numeros} apresenta as transições principais. Uma
+transição não representada leva ao estado de erro.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[afd,node distance=2.2cm]
+    \node[state,initial] (q0) {$q_0$};
+    \node[state,accepting,right=of q0] (q1) {$q_1$};
+    \node[state,right=of q1] (q2) {$q_2$};
+    \node[state,accepting,right=of q2] (q3) {$q_3$};
+    \path
+        (q0) edge node[above] {$D$} (q1)
+        (q1) edge[loop above] node {$D$} (q1)
+        (q1) edge node[above] {$.$} (q2)
+        (q2) edge node[above] {$D$} (q3)
+        (q3) edge[loop above] node {$D$} (q3);
+\end{tikzpicture}
+\caption{AFD para reconhecimento de números inteiros e decimais.}
+\label{fig:afd-numeros}
+\end{figure}
+
+\subsection{AFD para operadores e delimitadores}
+
+Os operadores e delimitadores são reconhecidos a partir de um único símbolo.
+Para fins de classificação, são separados em três grupos: operadores
+aritméticos, símbolo de atribuição e delimitadores. A definição de estados é:
+\[
+\begin{aligned}
+Q &= \{q_0,q_1,q_2,q_3,q_d\},\\
+\Sigma &= \{+,-,*,/,=,(,),\{,\},;\},\\
+F &= \{q_1,q_2,q_3\}.
+\end{aligned}
+\]
+
+O estado $q_1$ representa operadores aritméticos; $q_2$, atribuição; e
+$q_3$, delimitadores. O diagrama está representado na
+Figura~\ref{fig:afd-operadores}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[afd]
+    \node[state,initial] (q0) at (0,0) {$q_0$};
+    \node[state,accepting] (q1) at (4,2) {$q_1$};
+    \node[state,accepting] (q2) at (4,0) {$q_2$};
+    \node[state,accepting] (q3) at (4,-2) {$q_3$};
+    \path
+        (q0) edge node[above,sloped] {$+,-,*,/$} (q1)
+        (q0) edge node[above] {$=$} (q2)
+        (q0) edge node[below,sloped] {$(,),\{,\},;$} (q3);
+    \node[right=5mm of q1,align=left] {\small Operador\\[-1mm]\small aritmético};
+    \node[right=5mm of q2] {\small Atribuição};
+    \node[right=5mm of q3] {\small Delimitador};
+\end{tikzpicture}
+\caption{AFD para operadores e delimitadores.}
+\label{fig:afd-operadores}
+\end{figure}
+
+Os estados finais são mantidos separados porque cada um corresponde a uma
+categoria de token diferente. Se o objetivo fosse apenas reconhecer a união
+dos símbolos, os estados finais poderiam ser equivalentes quanto à aceitação
+da linguagem; entretanto, o analisador precisa preservar a classificação
+produzida.
+
+\section{Tabelas de transição}
+
+As tabelas de transição descrevem o estado de destino para cada combinação
+de estado atual e símbolo de entrada. Na Tabela~\ref{tab:trans-ident}, $L$
+representa uma letra, $D$ representa um dígito e \texttt{\_} representa o
+sublinhado.
+
+\begin{table}[H]
+\centering
+\caption{Tabela de transição do AFD de identificadores}
+\label{tab:trans-ident}
+\begin{tabular}{c|ccc}
+\toprule
+$\delta$ & $L$ & $D$ & \texttt{\_} \\
+\midrule
+$\rightarrow q_0$ & $q_1$ & $q_d$ & $q_1$ \\
+$*q_1$ & $q_1$ & $q_1$ & $q_1$ \\
+$q_d$ & $q_d$ & $q_d$ & $q_d$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A Tabela~\ref{tab:trans-num} apresenta as transições do autômato de números.
+O símbolo $*$ indica estado de aceitação e $\rightarrow$ indica estado
+inicial.
+
+\begin{table}[H]
+\centering
+\caption{Tabela de transição do AFD de números}
+\label{tab:trans-num}
+\begin{tabular}{c|cc}
+\toprule
+$\delta$ & $D$ & $.$ \\
+\midrule
+$\rightarrow q_0$ & $q_1$ & $q_d$ \\
+$*q_1$ & $q_1$ & $q_2$ \\
+$q_2$ & $q_3$ & $q_d$ \\
+$*q_3$ & $q_3$ & $q_d$ \\
+$q_d$ & $q_d$ & $q_d$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Minimização dos AFDs}
+
+A minimização busca obter um autômato equivalente com o menor número
+possível de estados. Um método utilizado é o refinamento de partições:
+inicialmente, os estados são separados entre finais e não finais. Em seguida,
+os grupos são divididos quando seus estados apresentam transições para
+partições diferentes.
+
+\subsection{Identificadores}
+
+Para o autômato de identificadores, a partição inicial é:
+\[
+    P_0 = \big\{\{q_1\},\{q_0,q_d\}\big\}.
+\]
+Os estados $q_0$ e $q_d$ são distinguíveis, pois, ao receber uma letra,
+$q_0$ transita para o estado final $q_1$, enquanto $q_d$ permanece no estado
+de erro. Assim, obtêm-se três classes:
+\[
+    P = \big\{\{q_0\},\{q_1\},\{q_d\}\big\}.
+\]
+Portanto, o AFD de identificadores já é mínimo.
+
+\subsection{Números}
+
+Para o autômato de números, a partição inicial é:
+\[
+    P_0 = \big\{\{q_1,q_3\},\{q_0,q_2,q_d\}\big\}.
+\]
+Os estados são separados porque apresentam comportamentos diferentes diante
+dos símbolos de entrada. Por exemplo, com o símbolo ponto, $q_1$ transita
+para $q_2$, enquanto $q_3$ transita para $q_d$. Com isso, $q_1$ e $q_3$ não
+são equivalentes. O refinamento distingue também $q_0$, $q_2$ e $q_d$,
+resultando em cinco classes para cinco estados. Logo, o AFD apresentado já
+é mínimo.
+
+\subsection{Operadores e delimitadores}
+
+No reconhecimento da união dos símbolos, os estados finais $q_1$, $q_2$ e
+$q_3$ têm comportamento equivalente quanto à aceitação, pois não possuem
+transições posteriores relevantes. Contudo, no analisador léxico, eles
+representam saídas semânticas diferentes: operador aritmético, atribuição e
+delimitador. Por essa razão, são mantidos separados para preservar o tipo
+de token produzido.
+
+\section{Implementação de apoio em Python}
+
+Além da representação formal, foi elaborada uma implementação de apoio em
+Python. O código utiliza expressões regulares para localizar os padrões
+léxicos e classificar cada sequência encontrada. As palavras-chave são
+identificadas após o reconhecimento de um identificador, verificando se o
+texto pertence ao conjunto de palavras reservadas.
+
+\begin{lstlisting}[caption={Implementação simplificada do analisador léxico da MiniLang.},label={lst:lexer}]
+import re
+
+PALAVRAS_CHAVE = {"if", "else", "while", "int", "float"}
+
+PADRAO = re.compile(
+    r"(?P<ESPACO>\s+)"
+    r"|(?P<DECIMAL>[0-9]+\.[0-9]+)"
+    r"|(?P<INTEIRO>[0-9]+)"
+    r"|(?P<IDENTIFICADOR>[a-zA-Z_][a-zA-Z0-9_]*)"
+    r"|(?P<OPERADOR>[+\-*/=])"
+    r"|(?P<DELIMITADOR>[(){};])"
+)
+
+def analisar(codigo):
+    tokens = []
+    posicao = 0
+
+    while posicao < len(codigo):
+        resultado = PADRAO.match(codigo, posicao)
+
+        if resultado is None:
+            caractere = codigo[posicao]
+            raise ValueError(
+                f"Caractere invalido na posicao {posicao}: {caractere}"
+            )
+
+        tipo = resultado.lastgroup
+        valor = resultado.group()
+
+        if tipo != "ESPACO":
+            if tipo == "IDENTIFICADOR" and valor in PALAVRAS_CHAVE:
+                tipo = "PALAVRA_CHAVE"
+
+            tokens.append((tipo, valor))
+
+        posicao = resultado.end()
+
+    return tokens
+
+
+codigo = "int idade = 20;"
+for token in analisar(codigo):
+    print(token)
+\end{lstlisting}
+
+O exemplo de entrada \texttt{int idade = 20;} contém uma palavra-chave,
+um identificador, um símbolo de atribuição, um número inteiro e um
+delimitador. A classificação esperada é apresentada na
+Tabela~\ref{tab:exemplo}.
+
+\begin{table}[H]
+\centering
+\caption{Classificação dos tokens da instrução de exemplo}
+\label{tab:exemplo}
+\begin{tabular}{ll}
+\toprule
+\textbf{Token} & \textbf{Classificação} \\
+\midrule
+\texttt{int} & Palavra-chave \\
+\texttt{idade} & Identificador \\
+\texttt{=} & Atribuição \\
+\texttt{20} & Número inteiro \\
+\texttt{;} & Delimitador \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A implementação percorre a entrada da esquerda para a direita. Em cada
+posição, tenta reconhecer um dos padrões definidos. Espaços em branco são
+ignorados, enquanto os demais elementos são armazenados como pares
+\texttt{(tipo, valor)}. Caso nenhum padrão corresponda ao trecho atual, é
+gerado um erro informando a posição do caractere inválido.
+
+\section{Análise da implementação}
+
+A implementação utiliza expressões regulares para reconhecer os padrões
+léxicos. A busca por cada padrão ocorre a partir da posição atual do texto,
+evitando que caracteres inválidos sejam silenciosamente ignorados. A
+verificação de palavras reservadas é realizada depois do reconhecimento
+genérico de identificadores, pois palavras-chave e identificadores possuem
+estrutura textual semelhante.
+
+A função de análise mantém a posição atual da leitura e avança até o final
+do código-fonte. Dessa forma, cada trecho reconhecido é consumido uma única
+vez. Para uma entrada com $n$ caracteres, a quantidade de posições
+percorridas é linear; o custo efetivo também depende da quantidade e da
+complexidade dos padrões utilizados pela biblioteca de expressões regulares.
+
+É importante destacar que o código apresentado é uma implementação de apoio
+para as categorias especificadas. Ele não constitui um compilador completo:
+não realiza análise sintática, verificação semântica ou geração de código.
+
+\section{Conclusão}
+
+O desenvolvimento do analisador léxico para a MiniLang permitiu relacionar
+os conceitos de Linguagens Formais e Autômatos com uma aplicação prática
+presente no processo de compilação. Foram descritas as categorias léxicas,
+as expressões regulares, as definições formais dos AFDs, os diagramas de
+transição e as tabelas correspondentes.
+
+A discussão sobre minimização mostrou como estados podem ser comparados
+pelo comportamento de suas transições e pela condição de aceitação. Também
+foi observado que, em um analisador léxico, a classificação dos tokens deve
+ser preservada, mesmo quando estados finais são equivalentes apenas do ponto
+de vista da linguagem reconhecida.
+
+Por fim, a implementação em Python demonstrou uma forma de percorrer o
+código-fonte, reconhecer padrões e produzir tokens. Como continuidade,
+podem ser acrescentados novos operadores, regras léxicas, mensagens de erro
+mais detalhadas e integração com uma etapa de análise sintática.
+
+\end{document}
+Você atingiu seu limite de análise de dados. Faça upgrade para ChatGPT Plus ou tente novamente amanhã após 18:48.
+
+
+
+
